@@ -2,10 +2,11 @@
 ## Information
 - Pyhton版本为3.8.2
 - 使用数据库为MySQL
-- config.json配置数据库连接
 
 ## 使用
 - 需要Python3及PyMySQL
+- 在MySQL库中执行CreateFolderTable.sql以创建所需存储过程
+- 在config.json中添加数据库连接
 ### Windows
 ``Python3 Share.py``
 

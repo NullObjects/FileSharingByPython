@@ -2,10 +2,10 @@
     "version": "0.1.0",
     "connections":[
         {
-            "host": "39.97.160.174",
-            "database": "FileShareDB",
-            "user": "Hua",
-            "password": "Hj147258"
+            "host": "",
+            "database": "",
+            "user": "",
+            "password": ""
         }
     ],
     "connectionSelect":"0"
