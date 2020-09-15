@@ -1,6 +1,7 @@
+#! /usr/bin/python3
+# -*-coding:utf-8-*-
 import os
-import json
-import pymysql
+from Foo import Foo
 from Model import FileModel, PackageModel
 
 
@@ -8,115 +9,93 @@ class Download(object):
     """
     数据流写入文件类.
     """
+
     def __init__(self):
         """
         初始化写入.
         """
-        self.AllFiles = []
+        self.all_files = []
+        self.count = 0
+        self.finished = 0
 
-    def __DBInit(self):
-        """
-        数据库连接初始化
-        """
-        #新建连接
-        with open('config.json') as __configJson:
-            __config = json.load(__configJson)
-        __dbConfig = __config['connections'][int(__config['connectionSelect'])]
-        try:
-            self.__connection = pymysql.connect(host=__dbConfig['host'],
-                                           database=__dbConfig['database'],
-                                           user=__dbConfig['user'],
-                                           password=__dbConfig['password'])
-            return True
-        #连接字典错误
-        except Exception as ex:
-            print('Exception:\n' + str(ex))
-            return False
-
-    def DownloadFromDB(self, folderName, dir):
+    def download_from_db(self, folder_name, folder_dir):
         """
         从数据库下载数据.
 
         Args:
-            folderName:选中的数据
-            dir:下载目录
+            folder_name:选中的数据
+            folder_dir:下载目录
         """
-        if (not self.__DBInit()):
+        connection = Foo.db_init()
+        if connection is None:
             return
-        if (not dir.endswith(os.sep)):
-            dir += os.sep
+        if not folder_dir.endswith(os.sep):
+            folder_dir += os.sep
 
         try:
-            self.__cursor = self.__connection.cursor()
+            cursor = connection.cursor()
             # 查询总量
-            self.__cursor.execute("SELECT COUNT(PackageID) FROM " + folderName)
-            self.Count = int(self.__cursor.fetchone()[0])
-            self.Finshed = 0
-            if (self.Count != 0):
-                #查询文件名
-                self.__cursor.execute("SELECT DISTINCT PackageName FROM " +
-                                      folderName)
-                __Files = self.__cursor.fetchall()
-                for __file in __Files:
-                    __currentName = __file[0].replace('\\', os.sep)
-                    __currentName = __file[0].replace('/', os.sep)
+            cursor.execute("SELECT COUNT(PackageID) FROM " + folder_name)
+            self.count = int(cursor.fetchone()[0])
+            self.finished = 0
+            if self.count != 0:
+                # 查询文件名
+                cursor.execute("SELECT DISTINCT PackageName FROM " + folder_name)
+                files = cursor.fetchall()
+                for file in files:
                     # 添加文件
-                    self.AllFiles.append(
-                        FileModel.FileModel(dir + __file[0].replace(
-                            '\\', os.sep).replace('/', os.sep)))
+                    self.all_files.append(
+                        FileModel.FileModel(folder_dir + file[0].replace('\\', os.sep).replace('/', os.sep)))
                     # 查询文件包数量
-                    self.__cursor.execute(
-                        "SELECT COUNT(PackageIndex) FROM " + folderName +
-                        " WHERE PackageName = %s", (__file[0]))
-                    __packageCount = int(self.__cursor.fetchone()[0])
+                    cursor.execute("SELECT COUNT(PackageIndex) FROM " + folder_name +
+                                   " WHERE PackageName = %s", (file[0]))
+                    package_count = int(cursor.fetchone()[0])
                     # 遍历获取文件包
-                    for __index in range(__packageCount):
-                        self.__cursor.execute("SELECT PackageData FROM " + folderName + " WHERE PackageName = %s AND PackageIndex = %s", (__file[0], __index))
+                    for index in range(package_count):
+                        cursor.execute("SELECT PackageData FROM " + folder_name +
+                                       " WHERE PackageName = %s AND PackageIndex = %s", (file[0], index))
                         # 添加文件包
-                        self.AllFiles[len(self.AllFiles) - 1].Packages.append(
+                        self.all_files[len(self.all_files) - 1].Packages.append(
                             PackageModel.PackageModel(
-                                __index,
-                                __file[0].replace('\\',
-                                                  os.sep).replace('/', os.sep),
-                                self.__cursor.fetchone()[0]))
-                        #刷新进度显示
-                        self.Finshed += 1
-                        __persent = int(self.Finshed / self.Count * 50)
-                        print("\r",
-                              '[' + '=' * __persent + '-' * (50 - __persent) +
-                              ']' + str(self.Finshed) + '/' + str(self.Count),
-                              end='\t\t',
-                              flush=True)
+                                index,
+                                file[0].replace('\\', os.sep).replace('/', os.sep),
+                                cursor.fetchone()[0]))
+                        # 刷新进度显示
+                        self.finished += 1
+                        Foo.progress_refresh(self.count, self.finished)
+                # 下载完成
+                cursor.close()
+                connection.close()
                 print('GetData Completed')
         except Exception as ex:
             print("GetData Error:\n" + str(ex))
             return
 
-    def __BinaryDataRestoration(self, writeData, fileName):
+    def write_to_files(self):
+        """
+        文件包组合写入.
+        """
+        # 遍历写入文件
+        for file in self.all_files:
+            write_data = []
+            # 遍历添加文件包
+            for package in file.Packages:
+                write_data.append(package.PackageData)
+            # 写入文件
+            self._binary_data_restoration(write_data, file.FileName)
+
+    def _binary_data_restoration(self, write_data, file_name):
         """
         二进制数据流写入文件.
 
         Args:
-            writeData: 数据流列表
-            fileName: 指定存储文件
+            write_data: 数据流列表
+            file_name: 指定存储文件
         """
-        #目录不存在则创建目录
-        if (not os.path.exists(os.path.dirname(fileName))):
-            os.makedirs(os.path.dirname(fileName))
-        #写入数据
-        with open(fileName, 'wb') as __writeFile:
-            for __data in writeData:
-                __writeFile.write(__data)
-
-    def WriteTOFiles(self):
-        """
-        文件包组合写入.
-        """
-        #遍历写入文件
-        for __file in self.AllFiles:
-            __writeData = []
-            #遍历添加文件包
-            for __package in __file.Packages:
-                __writeData.append(__package.PackageData)
-            #写入文件
-            self.__BinaryDataRestoration(__writeData, __file.FileName)
+        # 目录不存在则创建目录
+        if not os.path.exists(os.path.dirname(file_name)):
+            os.makedirs(os.path.dirname(file_name))
+        # 写入数据
+        with open(file_name, 'wb') as write_file:
+            for data in write_data:
+                write_file.write(data)

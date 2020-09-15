@@ -1,13 +1,18 @@
+#! /usr/bin/python3
+# -*-coding:utf-8-*-
+
 class PackageModel(object):
     """
     文件包模型.
     """
+
     @property
     def PackageIndex(self):
         """
         文件包索引层级.
         """
         return self.__packageIndex
+
     @PackageIndex.setter
     def PackageIndex(self, value):
         """
@@ -21,6 +26,7 @@ class PackageModel(object):
         完整文件包名.
         """
         return self.__packageName
+
     @PackageName.setter
     def PackageName(self, value):
         """
@@ -34,6 +40,7 @@ class PackageModel(object):
         文件包数据.
         """
         return self.__packageData
+
     @PackageData.setter
     def PackageData(self, value):
         """
@@ -41,15 +48,15 @@ class PackageModel(object):
         """
         self.__packageData = value
 
-    def __init__(self, packageIndex, packageName, packageData):
+    def __init__(self, package_index, package_name, package_data):
         """
         初始化模型.
 
         Args:
-            packageIndex: 文件包索引
-            packageName: 文件包名
-            packageData: 文件包数据
+            package_index: 文件包索引
+            package_name: 文件包名
+            package_data: 文件包数据
         """
-        self.PackageIndex = packageIndex
-        self.PackageName = packageName
-        self.PackageData = packageData
+        self.PackageIndex = package_index
+        self.PackageName = package_name
+        self.PackageData = package_data

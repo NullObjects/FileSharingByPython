@@ -1,13 +1,18 @@
+#! /usr/bin/python3
+# -*-coding:utf-8-*-
+
 class FileModel(object):
     """
     文件模型.
     """
+
     @property
     def FileName(self):
         """
         文件信息.
         """
         return self.__fileName
+
     @FileName.setter
     def FileName(self, value):
         """
@@ -21,6 +26,7 @@ class FileModel(object):
         文件对应文件包.
         """
         return self.__packages
+
     @Packages.setter
     def Packages(self, value):
         """
@@ -28,12 +34,12 @@ class FileModel(object):
         """
         self.__packages = value
 
-    def __init__(self, fileName):
+    def __init__(self, file_name):
         """
         初始化模型.
 
         Args:
-            fileName: 文件名
+            file_name: 文件名
         """
-        self.FileName = fileName
+        self.FileName = file_name
         self.Packages = []
